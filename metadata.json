@@ -1,0 +1,6 @@
+{
+  "name": "Trạm Cá Nhân",
+  "description": "Kho lưu trữ portfolio, nhật ký hành trình tự học và không gian nhúng ứng dụng cá nhân độc bản dành cho học sinh tốt nghiệp THPT.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

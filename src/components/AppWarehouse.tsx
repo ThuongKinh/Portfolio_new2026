@@ -25,14 +25,15 @@ import {
   Plus,
   PlusCircle,
   Eye,
-  Settings
+  Settings,
+  Folder,
+  FileCode,
+  Download,
+  AlertCircle,
+  Save,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
-import { WorkoutDay, WorkoutExercise } from '../types';
-
-interface AppWarehouseProps {
-  workoutDays: WorkoutDay[];
-  onUpdateWorkoutDays: (updated: WorkoutDay[]) => void;
-}
 
 const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
 <html lang="vi">
@@ -439,148 +440,208 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export default function AppWarehouse({ workoutDays, onUpdateWorkoutDays }: AppWarehouseProps) {
-  const [activeTab, setActiveTab] = useState<'tracker' | 'sandbox'>('tracker');
-  const [activeDayId, setActiveDayId] = useState<string>('day_2'); // Default to Monday (Thứ Hai)
+
+const DEFAULT_BLANK_HTML = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sân chơi HTML</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4 text-center">
+    <div>
+        <h1 class="text-2xl font-black uppercase text-emerald-400 tracking-wider">Trang trắng thiết kế</h1>
+        <p class="text-slate-400 mt-2 text-xs">Hãy tự biên soạn bất cứ thứ gì bạn muốn tại đây!</p>
+    </div>
+</body>
+</html>`;
+
+interface WebAppInfo {
+  id: string;
+  filename: string;
+  title: string;
+  description: string;
+  code: string;
+  category: 'fitness' | 'utility' | 'education' | 'other';
+  icon: 'Dumbbell' | 'Clock' | 'Layers' | 'Code';
+}
+
+interface AppWarehouseProps {
+  currentHash: string;
+}
+
+export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
   
-  // Custom HTML Sandbox states
-  const [htmlCode, setHtmlCode] = useState<string>(() => {
-    const saved = localStorage.getItem('tram_canhan_custom_html');
-    return saved || DEFAULT_EMBED_HTML;
+  // Custom HTML Sandbox & Portables management
+  const [apps, setApps] = useState<WebAppInfo[]>(() => {
+    const saved = localStorage.getItem('tram_canhan_sandbox_apps');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error loading apps", e);
+      }
+    }
+    return [
+      {
+        id: 'app_lichtap',
+        filename: 'LichTap.html',
+        title: 'Xà Đơn Toàn Năng',
+        description: 'Bản nâng cấp tối giản lịch tập UL-PPL với đồng hồ nghỉ hiệp, đếm ngược tiến trình và mẹo tăng cơ.',
+        category: 'fitness',
+        icon: 'Dumbbell',
+        code: DEFAULT_EMBED_HTML,
+      },
+          ];
   });
-  const [renderedHtml, setRenderedHtml] = useState<string>(htmlCode);
+
+  const isListView = currentHash === '#warehouse' || currentHash === '#warehouse/';
+  const selectedAppId = isListView ? '' : currentHash.replace('#warehouse/', '');
+
+  const activeApp = apps.find(a => a.id === selectedAppId) || apps[0] || {
+    id: 'app_lichtap',
+    filename: 'LichTap.html',
+    title: 'Xà Đơn Toàn Năng',
+    description: 'Bản nâng cấp tối giản lịch tập UL-PPL với đồng hồ nghỉ hiệp, đếm ngược tiến trình và mẹo tăng cơ.',
+    category: 'fitness',
+    icon: 'Dumbbell',
+    code: DEFAULT_EMBED_HTML,
+  };
+
+  // Custom HTML Editor code
+  const [htmlCode, setHtmlCode] = useState<string>(activeApp.code);
+  const [renderedHtml, setRenderedHtml] = useState<string>(activeApp.code);
   const [sandboxDevice, setSandboxDevice] = useState<'mobile' | 'desktop'>('mobile');
 
-  // Exercise Form states
-  const [newExName, setNewExName] = useState('');
-  const [newExSets, setNewExSets] = useState(3);
-  const [newExReps, setNewExReps] = useState('10-12');
-  const [newExNotes, setNewExNotes] = useState('');
+  // Input fields for creation
+  const [newFilename, setNewFilename] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newTemplateType, setNewTemplateType] = useState<'blank' | 'lichtap' | 'pomodoro' | 'finance'>('blank');
 
-  // Rest Timer states
-  const [timerSeconds, setTimerSeconds] = useState<number>(60);
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const [presetSeconds, setPresetSeconds] = useState<number>(60);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // Sync state to localStorage
+  useEffect(() => {
+    localStorage.setItem('tram_canhan_sandbox_apps', JSON.stringify(apps));
+  }, [apps]);
 
-  // Sync custom HTML to localStorage
+  useEffect(() => {
+    // When changing active app, update editor content
+    if (!isListView) {
+      const selected = apps.find(a => a.id === selectedAppId);
+      if (selected) {
+        setHtmlCode(selected.code);
+        setRenderedHtml(selected.code);
+      }
+    }
+  }, [selectedAppId, apps, isListView]);
+
+  // Sync edits to the active app
   const handleSaveHtml = () => {
-    localStorage.setItem('tram_canhan_custom_html', htmlCode);
+    const updated = apps.map((app) => {
+      if (app.id === selectedAppId) {
+        return { ...app, code: htmlCode };
+      }
+      return app;
+    });
+    setApps(updated);
     setRenderedHtml(htmlCode);
   };
 
   const handleResetHtmlToDefault = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đặt lại mã nguồn mẫu ban đầu không?')) {
-      setHtmlCode(DEFAULT_EMBED_HTML);
-      setRenderedHtml(DEFAULT_EMBED_HTML);
-      localStorage.setItem('tram_canhan_custom_html', DEFAULT_EMBED_HTML);
+    if (window.confirm('Bạn có chắc chắn muốn đặt lại mã nguồn của ứng dụng này về mẫu ban đầu không?')) {
+      let defaultCode = DEFAULT_BLANK_HTML;
+      if (activeApp.id === 'app_lichtap') defaultCode = DEFAULT_EMBED_HTML;
+      else if (activeApp.id === 'app_pomodoro') defaultCode = DEFAULT_POMODORO_HTML;
+      else if (activeApp.id === 'app_option_pricing') defaultCode = DEFAULT_FINANCE_HTML;
+
+      setHtmlCode(defaultCode);
+      setRenderedHtml(defaultCode);
+      const updated = apps.map((app) => {
+        if (app.id === selectedAppId) {
+          return { ...app, code: defaultCode };
+        }
+        return app;
+      });
+      setApps(updated);
     }
   };
 
-  // Stopwatch timer controller
-  useEffect(() => {
-    if (isTimerRunning) {
-      timerRef.current = setInterval(() => {
-        setTimerSeconds((prev) => {
-          if (prev <= 1) {
-            setIsTimerRunning(false);
-            if (timerRef.current) clearInterval(timerRef.current);
-            // Quick visual trigger for beep/alarm
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isTimerRunning]);
-
-  const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
-  const resetTimer = () => {
-    setIsTimerRunning(false);
-    setTimerSeconds(presetSeconds);
-  };
-  const setTimerPreset = (secs: number) => {
-    setIsTimerRunning(false);
-    setPresetSeconds(secs);
-    setTimerSeconds(secs);
-  };
-
-  // Helper to get selected active day object
-  const activeDay = workoutDays.find(d => d.id === activeDayId) || workoutDays[0];
-
-  // Exercises triggers
-  const handleToggleExercise = (exerciseId: string) => {
-    const updated = workoutDays.map((day) => {
-      if (day.id === activeDayId) {
-        return {
-          ...day,
-          exercises: day.exercises.map((ex) => {
-            if (ex.id === exerciseId) {
-              return { ...ex, completed: !ex.completed };
-            }
-            return ex;
-          })
-        };
-      }
-      return day;
-    });
-    onUpdateWorkoutDays(updated);
-  };
-
-  const handleAddExercise = (e: React.FormEvent) => {
+  // Adding novel portable app
+  const handleCreateApp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newExName.trim()) return;
+    if (!newFilename.trim() || !newTitle.trim()) return;
 
-    const newEx: WorkoutExercise = {
-      id: 'ex_' + Date.now(),
-      name: newExName.trim(),
-      sets: newExSets,
-      reps: newExReps.trim(),
-      notes: newExNotes.trim(),
-      completed: false
+    let sanitizedFn = newFilename.trim().replace(/\s+/g, '_');
+    if (!sanitizedFn.endsWith('.html')) {
+      sanitizedFn += '.html';
+    }
+
+    let defaultCode = DEFAULT_BLANK_HTML;
+    let selectedIcon: 'Dumbbell' | 'Clock' | 'Layers' | 'Code' = 'Code';
+    let selectedCategory: 'fitness' | 'utility' | 'education' | 'other' = 'other';
+
+    if (newTemplateType === 'lichtap') {
+      defaultCode = DEFAULT_EMBED_HTML;
+      selectedIcon = 'Dumbbell';
+      selectedCategory = 'fitness';
+    } else if (newTemplateType === 'pomodoro') {
+      defaultCode = DEFAULT_POMODORO_HTML;
+      selectedIcon = 'Clock';
+      selectedCategory = 'utility';
+    } else if (newTemplateType === 'finance') {
+      defaultCode = DEFAULT_FINANCE_HTML;
+      selectedIcon = 'Layers';
+      selectedCategory = 'education';
+    }
+
+    const newApp: WebAppInfo = {
+      id: 'custom_' + Date.now(),
+      filename: sanitizedFn,
+      title: newTitle.trim(),
+      description: newDescription.trim() || 'Ứng dụng thuần HTML/CSS tự đóng gói chế tạo.',
+      category: selectedCategory,
+      icon: selectedIcon,
+      code: defaultCode
     };
 
-    const updated = workoutDays.map((day) => {
-      if (day.id === activeDayId) {
-        return {
-          ...day,
-          isRestDay: false, // Ensure it's not a rest day if we add movements
-          exercises: [...day.exercises, newEx]
-        };
-      }
-      return day;
-    });
+    const updated = [...apps, newApp];
+    setApps(updated);
 
-    onUpdateWorkoutDays(updated);
-    
-    // Clear fields
-    setNewExName('');
-    setNewExNotes('');
+    window.location.hash = `#warehouse/${newApp.id}`;
+
+    // Clear form inputs
+    setNewFilename('');
+    setNewTitle('');
+    setNewDescription('');
+    setNewTemplateType('blank');
   };
 
-  const handleDeleteExercise = (exerciseId: string) => {
-    const updated = workoutDays.map((day) => {
-      if (day.id === activeDayId) {
-        return {
-          ...day,
-          exercises: day.exercises.filter(ex => ex.id !== exerciseId)
-        };
-      }
-      return day;
-    });
-    onUpdateWorkoutDays(updated);
+  const handleDeleteApp = (appId: string) => {
+    if (apps.length <= 1) {
+      alert("Bạn phải giữ lại ít nhất 1 ứng dụng trong kho lưu trữ!");
+      return;
+    }
+    if (window.confirm("Bạn có chắc muốn xóa ứng dụng này khỏi kho lưu trữ không?")) {
+      const remaining = apps.filter(a => a.id !== appId);
+      setApps(remaining);
+      // Go back to the list
+      window.location.hash = '#warehouse';
+    }
   };
 
-  // Quick stats calculations
-  const totalExercises = workoutDays.reduce((acc, d) => acc + d.exercises.length, 0);
-  const completedExercises = workoutDays.reduce((acc, d) => acc + d.exercises.filter(e => e.completed).length, 0);
-  const workoutProgressPercent = totalExercises > 0 ? Math.round((completedExercises / totalExercises) * 100) : 0;
+  // Helper trigger browser file download
+  const handleDownloadAppHtml = (app: WebAppInfo) => {
+    const blob = new Blob([app.code], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = app.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-12">
@@ -598,474 +659,288 @@ export default function AppWarehouse({ workoutDays, onUpdateWorkoutDays }: AppWa
             Kho Ứng Dụng Độc Bản
           </h2>
           <p className="text-gray-500 text-xs max-w-xl uppercase tracking-wider leading-relaxed">
-            Sử dụng <b>Bộ theo dõi lịch tập</b> tối giản do mentor hướng dẫn, hoặc dán thử mã nguồn HTML bạn tự tay hoàn thiện vào thẻ <b>Sandbox tự sản xuất</b> bên phải để chạy trực tiếp!
+            Các ứng dụng thu nhỏ được đóng gói trực tiếp bằng HTML nguyên bản. Ấn vào một ứng dụng để tiến vào trình biên tập và mô phỏng!
           </p>
-        </div>
-
-        {/* Tab Selector in Monochromatic wireframe structure */}
-        <div className="flex border border-black bg-white p-1 w-full md:w-auto">
-          <button
-            onClick={() => setActiveTab('tracker')}
-            className={`flex-1 md:flex-none uppercase tracking-widest font-mono px-4 py-2 text-[10px] font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-              activeTab === 'tracker' 
-                ? 'bg-black text-white' 
-                : 'text-gray-500 hover:text-black hover:bg-neutral-55 bg-white'
-            }`}
-          >
-            <Dumbbell className="w-3.5 h-3.5" /> Lịch tập mặc định
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('sandbox');
-              setRenderedHtml(htmlCode);
-            }}
-            className={`flex-1 md:flex-none uppercase tracking-widest font-mono px-4 py-2 text-[10px] font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-              activeTab === 'sandbox' 
-                ? 'bg-black text-white' 
-                : 'text-gray-500 hover:text-black hover:bg-neutral-55 bg-white'
-            }`}
-          >
-            <Code className="w-3.5 h-3.5" /> Sandbox tự sản xuất
-          </button>
         </div>
       </div>
 
-      {/* RENDER ACTIVE TAB */}
-      {activeTab === 'tracker' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          
-          {/* Day Selector & Overall statistics */}
-          <div className="col-span-1 space-y-8">
-            <div className="bg-white border border-black p-6 space-y-6">
-              
+      {isListView ? (
+        <div className="space-y-8" id="sandbox-embed-tab">
+          {/* Top Panel: Registry of Saved Apps in the Warehouse */}
+            <div className="bg-white border-2 border-black p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b border-black">
               <div>
-                <h3 className="font-mono font-bold text-black text-xs uppercase tracking-widest pb-3 border-b border-[#E5E5E5] mb-4">Lịch Tập 7 Ngày</h3>
-                
-                <div className="grid grid-cols-1 gap-2">
-                  {workoutDays.map((day) => {
-                    const completedInDay = day.exercises.filter(e => e.completed).length;
-                    const totalInDay = day.exercises.length;
-                    const isSelected = day.id === activeDayId;
-
-                    return (
-                      <button
-                        key={day.id}
-                        onClick={() => setActiveDayId(day.id)}
-                        className={`w-full flex items-center justify-between p-3.5 text-left border transition cursor-pointer ${
-                          isSelected 
-                            ? 'bg-black border-black text-white font-bold' 
-                            : 'bg-white border-black text-black hover:bg-neutral-50'
-                        }`}
-                      >
-                        <div className="space-y-1">
-                          <p className="text-xs font-bold font-mono uppercase tracking-wider">{day.dayName}</p>
-                          <p className={`text-[10px] uppercase font-bold tracking-widest ${isSelected ? 'text-gray-300' : 'text-gray-400'} line-clamp-1`}>
-                            {day.isRestDay ? 'Nghỉ ngơi hồi phục 🍀' : day.workoutTitle.split('(')[0]}
-                          </p>
-                        </div>
-
-                        {!day.isRestDay && totalInDay > 0 && (
-                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 border ${
-                            isSelected ? 'bg-white text-black border-white' : 'bg-black text-white border-black'
-                          }`}>
-                            {completedInDay}/{totalInDay}
-                          </span>
-                        )}
-                        {day.isRestDay && (
-                          <span className={`text-[9px] font-mono font-bold border px-1.5 py-0.5 ${
-                            isSelected ? 'border-white text-white' : 'border-black text-black bg-white'
-                          }`}>REST</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Progress Summary Section */}
-              <div className="pt-4 border-t border-[#E5E5E5] space-y-4">
-                <div className="flex justify-between items-center text-[10px] font-mono font-bold uppercase tracking-wider text-black">
-                  <span className="flex items-center gap-1.5">
-                    <Trophy className="w-4 h-4 text-black" />
-                    Hiệu suất tuần tập
-                  </span>
-                  <span>{workoutProgressPercent}%</span>
-                </div>
-
-                <div className="w-full bg-neutral-100 h-3 border border-black overflow-hidden">
-                  <div 
-                    className="bg-black h-full transition-all duration-350"
-                    style={{ width: `${workoutProgressPercent}%` }}
-                  ></div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-center">
-                  <div className="p-3 bg-neutral-50 border border-black">
-                    <span className="block text-gray-400 text-[10px] font-mono font-bold uppercase tracking-wider">ĐÃ ĐẠT</span>
-                    <span className="font-mono font-bold text-black text-lg">{completedExercises}</span>
-                  </div>
-                  <div className="p-3 bg-neutral-50 border border-black">
-                    <span className="block text-gray-400 text-[10px] font-mono font-bold uppercase tracking-wider">TỔNG BÀI</span>
-                    <span className="font-mono font-bold text-black text-lg">{totalExercises}</span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Rest Timer Panel in minimalistic look */}
-            <div className="border border-black bg-white text-black p-6 space-y-5">
-              <div className="flex justify-between items-center pb-3 border-b border-black">
-                <h4 className="text-[10px] font-bold font-mono tracking-widest text-black uppercase flex items-center gap-1.5">
-                  <Clock className="w-4 h-4" /> ĐỒNG HỒ NGHỈ NGƠI
-                </h4>
-                {timerSeconds === 0 && (
-                  <span className="text-[9px] bg-black text-white border border-black px-2 py-0.5 font-bold uppercase tracking-widest">Tập tiếp! 💪</span>
-                )}
-              </div>
-
-              <div className="text-center py-2 space-y-1">
-                <p className="text-4xl md:text-5xl font-mono font-black text-black tracking-widest">
-                  {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
+                <h3 className="font-sans font-black text-xs uppercase tracking-[0.2em] text-[#1A1A1A] flex items-center gap-2">
+                  <Folder className="w-4 h-4 text-black" /> 📂 ~/kho-ung-dung-ca-nhan
+                </h3>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider mt-1">
+                  Nhấp vào ứng dụng để mở trong Trình soạn thảo và chạy thử Sandbox.
                 </p>
-                <p className="text-[10px] text-gray-400 font-sans uppercase tracking-widest">THỜI GIAN LÝ TƯỞNG THƯ GIÃN CƠ BẮP</p>
               </div>
-
-              {/* Presets and control triggers */}
-              <div className="grid grid-cols-3 gap-2">
-                {[30, 60, 90].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setTimerPreset(s)}
-                    className={`font-mono text-[10px] uppercase tracking-wider py-2 font-bold border transition cursor-pointer ${
-                      presetSeconds === s 
-                        ? 'bg-black text-white border-black' 
-                        : 'border-black hover:bg-neutral-100 text-black bg-white'
-                    }`}
-                  >
-                    {s} giây
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={toggleTimer}
-                  className={`flex-1 py-3 font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                    isTimerRunning 
-                      ? 'bg-white text-black border border-black hover:bg-neutral-50' 
-                      : 'bg-black text-white hover:bg-neutral-900'
-                  }`}
-                >
-                  {isTimerRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                  {isTimerRunning ? 'Tạm dừng' : 'Đếm ngược'}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetTimer}
-                  className="bg-white hover:bg-neutral-100 text-black border border-black p-3 flex items-center justify-center transition cursor-pointer"
-                  title="Đặt lại"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
-              </div>
+              
+              <span className="bg-neutral-100 border border-black px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-widest text-[#1A1A1A] self-start sm:self-auto">
+                TỔNG: {apps.length} TỆP BẢN DỰNG (.HTML)
+              </span>
             </div>
 
-          </div>
-
-          {/* Exercises list for selected Day */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="bg-white border border-black p-6">
-              <div className="border-b border-black pb-4 mb-6">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                  <div>
-                    <span className="text-[10px] font-bold font-mono tracking-widest text-gray-500 uppercase">
-                      // BUỔI TẬP CỦA {activeDay.dayName}
-                    </span>
-                    <h3 className="font-sans font-black text-black text-lg sm:text-xl uppercase tracking-tighter mt-1">
-                      {activeDay.workoutTitle}
-                    </h3>
-                  </div>
-
-                  {activeDay.isRestDay && (
-                    <span className="px-3.5 py-1.5 border border-black text-black bg-neutral-100 text-[10px] font-bold uppercase tracking-wider self-start">
-                      Nghỉ phục hồi xịn 🍀
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Exercise Item rows */}
-              {activeDay.isRestDay ? (
-                <div className="text-center py-16 space-y-4 border border-dashed border-black">
-                  <div className="w-12 h-12 border border-black text-black flex items-center justify-center mx-auto text-xl">
-                    REST
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-bold text-black text-xs uppercase tracking-widest">Hôm nay là Ngày Nghỉ Ngơi Phục Hồi</p>
-                    <p className="text-xs text-gray-500 max-w-sm mx-auto leading-relaxed uppercase tracking-wider">
-                      Cơ bắp phát triển trong khi nghỉ ngơi. Đi dạo nhẹ nhàng hoặc ngủ sâu giấc để tuần tập sau bùng nổ tốt hơn nhé!
-                    </p>
-                  </div>
-                </div>
-              ) : activeDay.exercises.length === 0 ? (
-                <div className="text-center py-16 border border-dashed border-black space-y-3">
-                  <p className="text-xs font-mono font-bold uppercase tracking-widest text-[#1A1A1A]">Danh sách rỗng!</p>
-                  <p className="text-xs text-gray-500 uppercase tracking-widest">Dùng form phía dưới để đăng ký bài tập của bạn.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-[#E5E5E5] border-b border-[#E5E5E5] mb-8">
-                  {activeDay.exercises.map((ex) => (
-                    <div 
-                      key={ex.id} 
-                      className={`flex items-start justify-between py-4 group ${ex.completed ? 'opacity-40 transition-opacity font-bold' : ''}`}
-                    >
-                      <div className="flex gap-4 items-start col-span-1">
-                        {/* Checkbox selector */}
-                        <button
-                          onClick={() => handleToggleExercise(ex.id)}
-                          className="pt-0.5 text-black hover:text-gray-600 transition cursor-pointer"
-                        >
-                          {ex.completed ? (
-                            <CheckSquare className="w-5 h-5 text-black" />
-                          ) : (
-                            <Square className="w-5 h-5 text-gray-300 hover:text-black" />
-                          )}
-                        </button>
-
-                        <div className="space-y-1.5">
-                          <p className={`text-xs font-black uppercase tracking-tight ${
-                            ex.completed ? 'text-gray-400 line-through' : 'text-black'
-                          }`}>
-                            {ex.name}
-                          </p>
-                          <div className="flex items-center gap-3 text-[10px] text-gray-500 font-mono uppercase tracking-widest font-bold">
-                            <span className="border border-black bg-neutral-50 px-2 py-0.5 text-[#1A1A1A]">
-                              {ex.sets} Hiệp
-                            </span>
-                            <span>/</span>
-                            <span>{ex.reps} Lần mỗi hiệp</span>
-                          </div>
-                          {ex.notes && (
-                            <p className="text-[11px] font-mono text-gray-400 bg-neutral-50 border border-[#E5E5E5] px-2 py-1 inline-block uppercase tracking-wide">
-                              Nốt: {ex.notes}
-                            </p>
-                          )}
-                        </div>
+            {/* Line-based list of apps including inline creator form */}
+            <div className="flex flex-col gap-4">
+              
+              {/* App Listing */}
+              {apps.map((app) => {
+                return (
+                  <a 
+                    href={`/${app.filename}`}
+                    target="_blank"
+                    key={app.id}
+                    className="group bg-white border-2 border-black p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-neutral-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px]"
+                  >
+                    <div className="flex items-center gap-4 relative z-0">
+                      <div className="p-3 bg-black text-white border border-black group-hover:bg-white group-hover:text-black transition-colors shrink-0">
+                        {app.icon === 'Dumbbell' && <Dumbbell className="w-5 h-5" />}
+                        {app.icon === 'Clock' && <Clock className="w-5 h-5" />}
+                        {app.icon === 'Layers' && <Layers className="w-5 h-5" />}
+                        {app.icon === 'Code' && <Code className="w-5 h-5" />}
                       </div>
-
-                      <button
-                        onClick={() => handleDeleteExercise(ex.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-black hover:bg-neutral-100 border border-transparent hover:border-black transition cursor-pointer"
-                        title="Xoá động tác"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div>
+                        <h3 className="text-base font-black uppercase tracking-tight">{app.title}</h3>
+                        <p className="text-[11px] text-gray-500 font-mono tracking-wider">📄 {app.filename}</p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                    
+                    <div className="flex items-center gap-2 md:gap-4 relative z-10 self-end md:self-auto" onClick={(e) => e.preventDefault()}>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleDownloadAppHtml(app);
+                        }}
+                        title="Tải tệp .html này về máy"
+                        className="p-2 text-gray-500 hover:text-black hover:bg-neutral-200 transition border border-transparent hover:border-black cursor-pointer bg-white md:bg-transparent"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      {apps.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDeleteApp(app.id);
+                          }}
+                          title="Xoá khỏi kho ứng dụng"
+                          className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition border border-transparent hover:border-rose-600 cursor-pointer bg-white md:bg-transparent"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors ml-2 pointer-events-none hidden md:block" />
+                    </div>
+                  </a>
+                );
+              })}
 
-              {/* Add New Exercise Inline Form (Only if not Rest day) */}
-              {!activeDay.isRestDay && (
-                <div className="pt-6 border-t-2 border-black">
-                  <h4 className="text-xs font-mono font-bold tracking-widest text-black uppercase mb-4 flex items-center gap-1.5">
-                    <PlusCircle className="w-4 h-4" /> THÊM ĐỘNG TÁC TẬP HẰNG NGÀY
-                  </h4>
-                  
-                  <form onSubmit={handleAddExercise} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-neutral-50 p-5 border border-black">
-                    <div className="sm:col-span-2">
-                      <label className="block text-[10px] font-mono uppercase tracking-widest text-black font-bold mb-1.5">Tên bài tập *</label>
+              {/* Creator form for new portables */}
+              <form onSubmit={handleCreateApp} className="mt-2 p-5 border-2 border-black bg-neutral-50 flex flex-col md:flex-row md:items-end gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)]">
+                <div className="flex-1 space-y-4 w-full">
+                  <div>
+                    <h4 className="font-black text-xs uppercase tracking-tight text-black flex items-center gap-1.5">
+                      <Plus className="w-4 h-4" /> THÊM ỨNG DỤNG MỚI
+                    </h4>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5">Sáng tạo các widget độc bản qua html</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs w-full">
+                    <div>
+                      <label className="block text-[9px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Tên file</label>
                       <input 
                         type="text" 
                         required
-                        placeholder="Vd: Bench Press, Squat..."
-                        value={newExName}
-                        onChange={(e) => setNewExName(e.target.value)}
-                        className="w-full bg-white border border-black px-3 py-2 text-xs text-black focus:outline-none focus:ring-1 focus:ring-black"
+                        placeholder="my_app.html"
+                        value={newFilename}
+                        onChange={(e) => setNewFilename(e.target.value)}
+                        className="w-full bg-white border border-black px-3 py-2 text-[11px] focus:ring-1 focus:ring-black"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-[10px] font-mono uppercase tracking-widest text-black font-bold mb-1.5">Số Hiệp</label>
-                      <input 
-                        type="number" 
-                        min={1}
-                        max={10}
-                        value={newExSets}
-                        onChange={(e) => setNewExSets(parseInt(e.target.value) || 3)}
-                        className="w-full bg-white border border-black px-3 py-2 text-xs text-black focus:outline-none focus:ring-1 focus:ring-black font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-mono uppercase tracking-widest text-black font-bold mb-1.5">Số Lần</label>
+                      <label className="block text-[9px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Tiêu đề</label>
                       <input 
                         type="text" 
-                        placeholder="Vd: 8-12, 45s..."
-                        value={newExReps}
-                        onChange={(e) => setNewExReps(e.target.value)}
-                        className="w-full bg-white border border-black px-3 py-2 text-xs text-black focus:outline-none focus:ring-1 focus:ring-black font-mono"
+                        required
+                        placeholder="Vd: Đồng hồ lofi"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        className="w-full bg-white border border-black px-3 py-2 text-[11px] focus:ring-1 focus:ring-black"
                       />
                     </div>
-
-                    <div className="sm:col-span-3">
-                      <label className="block text-[10px] font-mono uppercase tracking-widest text-black font-bold mb-1.5">Ghi chú kĩ thuật (Tùy chọn)</label>
-                      <input 
-                        type="text" 
-                        placeholder="Vd: Hạ chậm có kiểm soát..."
-                        value={newExNotes}
-                        onChange={(e) => setNewExNotes(e.target.value)}
-                        className="w-full bg-white border border-black px-3 py-2 text-xs text-black focus:outline-none focus:ring-1 focus:ring-black"
-                      />
-                    </div>
-
-                    <div className="flex items-end">
-                      <button
-                        type="submit"
-                        className="w-full py-2.5 bg-black hover:bg-neutral-900 text-white font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-1 transition cursor-pointer"
+                    <div>
+                      <label className="block text-[9px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Mẫu giao diện</label>
+                      <select 
+                        value={newTemplateType}
+                        onChange={(e) => setNewTemplateType(e.target.value as any)}
+                        className="w-full bg-white border border-black px-3 py-2 text-[11px] font-mono font-bold focus:ring-1 focus:ring-black"
                       >
-                        <Plus className="w-3.5 h-3.5" /> THÊM BÀI
-                      </button>
+                        <option value="blank">⚙️ Trang trắng</option>
+                        <option value="lichtap">💪 Lịch xà đơn</option>
+                        <option value="pomodoro">⏱️ Đồng hồ Pomodoro</option>
+                        <option value="finance">📐 Mô hình Black-Scholes</option>
+                      </select>
                     </div>
-                  </form>
+                  </div>
                 </div>
-              )}
+
+                <div className="w-full md:w-auto shrink-0 mt-2 md:mt-0">
+                  <button
+                    type="submit"
+                    className="w-full h-[38px] md:w-auto px-6 bg-black hover:bg-neutral-900 text-white font-mono font-bold text-[10px] uppercase tracking-widest transition cursor-pointer"
+                  >
+                    TẠO & BIÊN TẬP
+                  </button>
+                </div>
+              </form>
 
             </div>
           </div>
-
         </div>
       ) : (
-        /* HTML EMBED SANDBOX TAB */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8" id="sandbox-embed-tab">
-          
-          {/* Coding Textarea Panel (Left col) */}
-          <div className="lg:col-span-12 xl:col-span-5 space-y-4">
-            <div className="bg-white border border-black p-6 space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-black">
-                <h3 className="font-sans font-black text-xs uppercase tracking-[0.2em] text-[#1A1A1A]">Mã Nguồn HTML Widget</h3>
-                <span className="text-[9px] font-bold font-mono tracking-wider text-white bg-black px-2 py-0.5">HTML / JS CANVAS</span>
-              </div>
-
-              <p className="text-xs text-gray-500 leading-relaxed uppercase tracking-wide">
-                Dán mã nguồn HTML lịch tập tập luyện của bạn dưới đây, sau đó chạm <b>Cập nhật bản nhúng</b> để mô phỏng tương tác phía bên phải!
-              </p>
-
-              <div>
-                <textarea
-                  rows={18}
-                  value={htmlCode}
-                  onChange={(e) => setHtmlCode(e.target.value)}
-                  className="w-full bg-[#1A1A1A] text-emerald-400 font-mono text-[11px] p-4 border border-black focus:outline-none focus:ring-1 focus:ring-black overflow-x-auto selection:bg-neutral-800 leading-relaxed rounded-none"
-                  placeholder="<!DOCTYPE html>..."
-                />
-              </div>
-
-              <div className="flex justify-between gap-2 border-t border-black pt-4">
-                <button
-                  type="button"
-                  onClick={handleResetHtmlToDefault}
-                  className="text-[10px] font-bold uppercase tracking-wider text-gray-600 bg-white hover:bg-neutral-50 border border-black px-4 py-2 transition.5 cursor-pointer"
-                >
-                  Khôi phục mẫu
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveHtml}
-                  className="bg-black hover:bg-neutral-900 text-white font-bold px-5 py-2.5 text-[10px] uppercase tracking-widest flex items-center gap-1.5 transition cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> cập nhật bản nhúng
-                </button>
-              </div>
-            </div>
-
-            <div className="border border-black p-5 text-xs text-black leading-relaxed flex gap-3 bg-neutral-50">
-              <Sparkles className="w-5 h-5 text-black flex-shrink-0 mt-0.5" />
-              <div>
-                <b className="block text-black uppercase font-mono font-bold text-[10px] tracking-wider mb-1">Cẩm nang của Mentor:</b>
-                Nhúng code kiểu Sandbox này giúp tích lũy kỹ năng nhanh và trực quan. Hãy xem đây là động lực để bạn tự học CSS Layouts & Vanilla JS, chuẩn bị sẵn sàng cho những dự án thực tế sắp tới!
-              </div>
-            </div>
+        <div className="space-y-8" id="sandbox-embed-tab">
+          {/* Back button */}
+          <div>
+            <a href="#warehouse" className="inline-flex items-center gap-2 text-xs font-bold font-mono tracking-widest uppercase text-black hover:text-gray-600 transition">
+              <ArrowLeft className="w-4 h-4" /> Quay lại Kho Ứng Dụng
+            </a>
           </div>
 
-          {/* Simulated viewports framework (Right col) */}
-          <div className="lg:col-span-12 xl:col-span-7 space-y-4">
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex border border-black bg-white p-1">
-                <button
-                  onClick={() => setSandboxDevice('mobile')}
-                  className={`px-4 py-2 text-[10px] uppercase font-bold tracking-wider transition flex items-center gap-1.5 cursor-pointer ${
-                    sandboxDevice === 'mobile' ? 'bg-black text-white' : 'text-gray-500 hover:text-black bg-white'
-                  }`}
-                >
-                  <Smartphone className="w-3.5 h-3.5" /> Mô phỏng Di Động
-                </button>
-                <button
-                  onClick={() => setSandboxDevice('desktop')}
-                  className={`px-4 py-2 text-[10px] uppercase font-bold tracking-wider transition flex items-center gap-1.5 cursor-pointer ${
-                    sandboxDevice === 'desktop' ? 'bg-black text-white' : 'text-gray-500 hover:text-black bg-white'
-                  }`}
-                >
-                  <Laptop className="w-3.5 h-3.5" /> Trình Duyệt Toàn Trang
-                </button>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Coding Textarea Panel (Left col) */}
+            <div className="lg:col-span-12 xl:col-span-5 space-y-4">
+              <div className="bg-white border border-black p-6 space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b border-black">
+                  <h3 className="font-sans font-black text-xs uppercase tracking-[0.2em] text-[#1A1A1A]">
+                    TRÌNH SOẠN THẢO: {activeApp.filename}
+                  </h3>
+                  <span className="text-[9px] font-bold font-mono tracking-wider text-white bg-black px-2 py-0.5">
+                    RAW HTML-JS EDITOR
+                  </span>
+                </div>
+
+                <p className="text-xs text-gray-500 leading-relaxed uppercase tracking-wide">
+                  Chỉnh sửa trực tiếp HTML, CSS (Tailwind CDN) & Javascript của tệp <b>{activeApp.filename}</b> bên dưới, sau đó nhấn <b>LƯU & XEM TRỰC TIẾP</b> để tải lại trình giả lập bên phải!
+                </p>
+
+                <div>
+                  <textarea
+                    rows={18}
+                    value={htmlCode}
+                    onChange={(e) => setHtmlCode(e.target.value)}
+                    className="w-full bg-[#1A1A1A] text-emerald-400 font-mono text-[11px] p-4 border border-black focus:outline-none focus:ring-1 focus:ring-black overflow-x-auto selection:bg-neutral-800 leading-relaxed rounded-none"
+                    placeholder="<!DOCTYPE html>..."
+                  />
+                </div>
+
+                <div className="flex justify-between gap-2 border-t border-black pt-4">
+                  <button
+                    type="button"
+                    onClick={handleResetHtmlToDefault}
+                    className="text-[10px] font-bold uppercase tracking-wider text-gray-600 bg-white hover:bg-neutral-50 border border-black px-4 py-2 transition.5 cursor-pointer"
+                    title="Đặt lại mã nguồn tệp tin này về mặc định"
+                  >
+                    Khôi phục mẫu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveHtml}
+                    className="bg-black hover:bg-neutral-900 text-white font-bold px-5 py-2.5 text-[10px] uppercase tracking-widest flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5" /> LƯU & XEM TRỰC TIẾP
+                  </button>
+                </div>
               </div>
 
-              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-gray-400">STATE: LIVE PREVIEW WIDGET</span>
+              <div className="border border-black p-5 text-xs text-black leading-relaxed flex gap-3 bg-neutral-50">
+                <Sparkles className="w-5 h-5 text-black flex-shrink-0 mt-0.5" />
+                <div>
+                  <b className="block text-black uppercase font-mono font-bold text-[10px] tracking-wider mb-1">Hướng dẫn của Mentor:</b>
+                  Học qua thực hành viết file đơn lập HTML + Javascript vô cùng trực quan và hiệu quả. Bạn có thể nhấn biểu tượng <b><Download className="w-3 h-3 inline" /> Tải xuống</b> ở thẻ ứng dụng phía trên để lưu trực tiếp tệp tin về máy (chạy được ngay bằng cách click đúp trên hệ điều hành Linux Mint của bạn!).
+                </div>
+              </div>
             </div>
 
-            {/* Simulating container wrap in wireframe style */}
-            <div className="flex justify-center bg-white border-2 border-black p-4 md:p-8 min-h-[500px]">
-              {sandboxDevice === 'mobile' ? (
-                /* SMARTPHONE GADGET CONTAINER / MINIMAL BLACK OUTLINE */
-                <div className="relative w-full max-w-[340px] h-[580px] bg-white border-[6px] border-black flex flex-col overflow-hidden shadow-md">
-                  
-                  {/* Small clean frame header indicator bar */}
-                  <div className="h-8 bg-neutral-100 flex items-center justify-center border-b border-black text-[9px] font-mono tracking-wider font-bold">
-                    <span>VIEWPORT // PHONE</span>
-                  </div>
-
-                  {/* Sandboxed iframe */}
-                  <iframe
-                    id="sandbox-iframe-mobile"
-                    title="Mock Phone Web Viewer"
-                    srcDoc={renderedHtml}
-                    sandbox="allow-scripts"
-                    className="w-full flex-1 border-none bg-white"
-                  />
-                  
-                  <div className="h-4 bg-neutral-100 border-t border-black"></div>
+            {/* Simulated viewports framework (Right col) */}
+            <div className="lg:col-span-12 xl:col-span-7 space-y-4">
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex border border-black bg-white p-1">
+                  <button
+                    onClick={() => setSandboxDevice('mobile')}
+                    className={`px-4 py-2 text-[10px] uppercase font-bold tracking-wider transition flex items-center gap-1.5 cursor-pointer ${
+                      sandboxDevice === 'mobile' ? 'bg-black text-white' : 'text-gray-500 hover:text-black bg-white'
+                    }`}
+                  >
+                    <Smartphone className="w-3.5 h-3.5" /> Giả lập di động
+                  </button>
+                  <button
+                    onClick={() => setSandboxDevice('desktop')}
+                    className={`px-4 py-2 text-[10px] uppercase font-bold tracking-wider transition flex items-center gap-1.5 cursor-pointer ${
+                      sandboxDevice === 'desktop' ? 'bg-black text-white' : 'text-gray-500 hover:text-black bg-white'
+                    }`}
+                  >
+                    <Laptop className="w-3.5 h-3.5" /> Giao diện toàn màn hình
+                  </button>
                 </div>
-              ) : (
-                /* DESKTOP BROWSER PREVIEW GADGET */
-                <div className="w-full bg-white border-[3px] border-black flex flex-col overflow-hidden h-[580px]">
-                  {/* Browser toolbar */}
-                  <div className="bg-neutral-100 px-4 py-2 flex items-center justify-between border-b border-black">
-                    <div className="flex gap-1.5">
-                      <span className="w-2.5 h-2.5 bg-black inline-block"></span>
-                      <span className="w-2.5 h-2.5 bg-neutral-400 inline-block"></span>
-                      <span className="w-2.5 h-2.5 bg-neutral-200 inline-block"></span>
-                    </div>
-                    <div className="flex-grow bg-white border border-black text-gray-500 font-mono text-[9px] px-3 py-1 text-left ml-4 truncate">
-                      my-personal-domain.com/workout-app.html
-                    </div>
-                  </div>
 
-                  {/* Sandboxed iframe */}
-                  <iframe
-                    id="sandbox-iframe-desktop"
-                    title="Mock Desktop Web Viewer"
-                    srcDoc={renderedHtml}
-                    sandbox="allow-scripts"
-                    className="w-full flex-1 border-none bg-white"
-                  />
-                </div>
-              )}
+                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-emerald-600 animate-pulse">
+                  ● LIVE VIEWPORT SIMULATOR
+                </span>
+              </div>
+
+              {/* Simulating container wrap in wireframe style */}
+              <div className="flex justify-center bg-white border-2 border-black p-4 md:p-8 min-h-[500px]">
+                {sandboxDevice === 'mobile' ? (
+                  /* SMARTPHONE GADGET CONTAINER / MINIMAL BLACK OUTLINE */
+                  <div className="relative w-full max-w-[340px] h-[580px] bg-white border-[6px] border-black flex flex-col overflow-hidden shadow-md">
+                    
+                    {/* Small clean frame header indicator bar */}
+                    <div className="h-8 bg-neutral-100 flex items-center justify-center border-b border-black text-[9px] font-mono tracking-wider font-bold">
+                      <span>VIEWPORT // {activeApp.filename.toUpperCase()}</span>
+                    </div>
+
+                    {/* Sandboxed iframe */}
+                    <iframe
+                      id="sandbox-iframe-mobile"
+                      title="Mock Phone Web Viewer"
+                      srcDoc={renderedHtml}
+                      sandbox="allow-scripts"
+                      className="w-full flex-1 border-none bg-white"
+                    />
+                    
+                    <div className="h-4 bg-neutral-100 border-t border-black"></div>
+                  </div>
+                ) : (
+                  /* DESKTOP BROWSER PREVIEW GADGET */
+                  <div className="w-full bg-white border-[3px] border-black flex flex-col overflow-hidden h-[580px]">
+                    {/* Browser toolbar */}
+                    <div className="bg-neutral-100 px-4 py-2 flex items-center justify-between border-b border-black">
+                      <div className="flex gap-1.5">
+                        <span className="w-2.5 h-2.5 bg-black inline-block"></span>
+                        <span className="w-2.5 h-2.5 bg-neutral-400 inline-block"></span>
+                        <span className="w-2.5 h-2.5 bg-neutral-200 inline-block"></span>
+                      </div>
+                      <div className="flex-grow bg-white border border-black text-gray-500 font-mono text-[9px] px-3 py-1 text-left ml-4 truncate">
+                        localhost/{activeApp.filename}
+                      </div>
+                    </div>
+
+                    {/* Sandboxed iframe */}
+                    <iframe
+                      id="sandbox-iframe-desktop"
+                      title="Mock Desktop Web Viewer"
+                      srcDoc={renderedHtml}
+                      sandbox="allow-scripts"
+                      className="w-full flex-1 border-none bg-white"
+                    />
+                  </div>
+                )}
+              </div>
+
             </div>
-
           </div>
 
         </div>

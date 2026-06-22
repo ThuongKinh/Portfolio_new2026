@@ -4,19 +4,18 @@
  */
 
 import React from 'react';
-import { Sparkles, Terminal, BookOpen, Compass, Dumbbell, Map } from 'lucide-react';
+import { Terminal, Compass, Dumbbell, Map } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'portfolio' | 'journey' | 'warehouse' | 'mentor';
-  onChangeTab: (tab: 'portfolio' | 'journey' | 'warehouse' | 'mentor') => void;
+  currentHash: string;
 }
 
-export default function Header({ activeTab, onChangeTab }: HeaderProps) {
+export default function Header({ currentHash }: HeaderProps) {
   const NAV_LINKS = [
-    { id: 'portfolio', label: 'Portfolio', icon: <Terminal className="w-4 h-4" /> },
-    { id: 'journey', label: 'Hành Trình', icon: <Compass className="w-4 h-4" /> },
-    { id: 'warehouse', label: 'Kho Ứng Dụng', icon: <Dumbbell className="w-4 h-4" /> },
-    { id: 'mentor', label: 'Góc Mentor', icon: <Map className="w-4 h-4" /> }
+    { id: '#portfolio', label: 'Portfolio', icon: <Terminal className="w-4 h-4" /> },
+    { id: '#journey', label: 'Hành Trình', icon: <Compass className="w-4 h-4" /> },
+    { id: '#warehouse', label: 'Kho Ứng Dụng', icon: <Dumbbell className="w-4 h-4" /> },
+    { id: '#mentor', label: 'Góc Mentor', icon: <Map className="w-4 h-4" /> }
   ] as const;
 
   return (
@@ -25,8 +24,8 @@ export default function Header({ activeTab, onChangeTab }: HeaderProps) {
         <div className="flex items-center justify-between h-20">
           
           {/* Brand Signature */}
-          <div 
-            onClick={() => onChangeTab('portfolio')} 
+          <a 
+            href="#"
             className="flex items-center gap-3 cursor-pointer group"
             id="header-brand-logo"
           >
@@ -41,17 +40,20 @@ export default function Header({ activeTab, onChangeTab }: HeaderProps) {
                 STUDENT.LAB
               </span>
             </div>
-          </div>
+          </a>
 
           {/* Navigation Items */}
           <nav className="flex items-center gap-1">
             {NAV_LINKS.map((link) => {
-              const isActive = activeTab === link.id;
+              const isActive = link.id === '#warehouse' 
+                ? currentHash.startsWith('#warehouse')
+                : currentHash === link.id;
+              
               return (
-                <button
+                <a
                   key={link.id}
-                  id={`nav-link-${link.id}`}
-                  onClick={() => onChangeTab(link.id)}
+                  id={`nav-link-${link.id.replace('#', '')}`}
+                  href={link.id}
                   className={`text-[11px] font-bold uppercase tracking-wider px-3.5 py-2 transition-all duration-200 flex items-center gap-2 cursor-pointer ${
                     isActive 
                       ? 'bg-black text-white' 
@@ -60,7 +62,7 @@ export default function Header({ activeTab, onChangeTab }: HeaderProps) {
                 >
                   {link.icon}
                   <span className="hidden md:inline">{link.label}</span>
-                </button>
+                </a>
               );
             })}
           </nav>

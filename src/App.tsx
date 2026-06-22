@@ -10,12 +10,20 @@ import Portfolio from './components/Portfolio';
 import LearningJourney from './components/LearningJourney';
 import AppWarehouse from './components/AppWarehouse';
 import MentorCorner from './components/MentorCorner';
-import { INITIAL_PROFILE, INITIAL_MILESTONES, INITIAL_WORKOUTS } from './data';
-import { UserProfile, LearningMilestone, WorkoutDay } from './types';
-import { Sparkles, Quote, Star, Trophy, Target, Award } from 'lucide-react';
+import { INITIAL_PROFILE, INITIAL_MILESTONES } from './data';
+import { UserProfile, LearningMilestone } from './types';
+import { Terminal, Compass, Dumbbell, Map, ArrowRight } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'journey' | 'warehouse' | 'mentor'>('portfolio');
+  const [currentHash, setCurrentHash] = useState(() => window.location.hash || '');
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setCurrentHash(window.location.hash);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Load and manage User Profile state
   const [profile, setProfile] = useState<UserProfile>(() => {
@@ -43,19 +51,6 @@ export default function App() {
     return INITIAL_MILESTONES;
   });
 
-  // Load and manage Workouts state
-  const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>(() => {
-    const saved = localStorage.getItem('tram_canhan_workouts');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Error parsing workouts", e);
-      }
-    }
-    return INITIAL_WORKOUTS;
-  });
-
   // Sync to local storage
   useEffect(() => {
     localStorage.setItem('tram_canhan_profile', JSON.stringify(profile));
@@ -64,10 +59,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('tram_canhan_milestones', JSON.stringify(milestones));
   }, [milestones]);
-
-  useEffect(() => {
-    localStorage.setItem('tram_canhan_workouts', JSON.stringify(workoutDays));
-  }, [workoutDays]);
 
   // Handle updates from children
   const handleUpdateProfile = (updated: UserProfile) => {
@@ -78,91 +69,92 @@ export default function App() {
     setMilestones(updated);
   };
 
-  const handleUpdateWorkoutDays = (updated: WorkoutDay[]) => {
-    setWorkoutDays(updated);
-  };
-
-  // Helper stats for side widgets
-  const completedMilestonesCount = milestones.filter(m => m.isCompleted).length;
-  const totalMilestonesCount = milestones.length;
-
-  const totalExercises = workoutDays.reduce((acc, d) => acc + d.exercises.length, 0);
-  const completedExercises = workoutDays.reduce((acc, d) => acc + d.exercises.filter(e => e.completed).length, 0);
+  const isHome = currentHash === '' || currentHash === '#' || currentHash === '#/';
 
   return (
     <div id="app-container" className="min-h-screen bg-neutral-50 flex flex-col justify-between selection:bg-black selection:text-white font-sans antialiased text-black">
       
       {/* Sticky beautiful header navigation */}
-      <Header activeTab={activeTab} onChangeTab={setActiveTab} />
+      <Header currentHash={currentHash} />
 
       {/* Main viewport with slight side panel logic on desktop */}
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+      <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-grow">
         
-        {/* Quick welcome panel with visual cards */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2 relative p-6 bg-white border-2 border-black flex items-center justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] overflow-hidden">
-            <div className="space-y-1.5 z-10">
-              <h4 className="text-[10px] font-mono font-bold uppercase text-black flex items-center gap-1.5 tracking-widest">
-                <Sparkles className="w-3.5 h-3.5" /> Chào tân sinh viên!
-              </h4>
-              <p className="text-sm font-black text-black uppercase tracking-tight">
-                Lên lộ trình tên miền cho {profile.name.split(' ').pop()}
-              </p>
-              <p className="text-[11px] text-gray-500 uppercase tracking-wider">
-                Hãy bắt đầu sửa đổi và vọc vạch ứng dụng theo ý thích.
-              </p>
-            </div>
-            {/* Ambient decoration */}
-            <div className="absolute top-1/2 -translate-y-1/2 -right-6 text-neutral-100 pointer-events-none select-none">
-              <Quote className="w-24 h-24 stroke-[1.5]" />
-            </div>
+        {isHome ? (
+          <div className="flex flex-col gap-4">
+            <h2 className="text-sm font-black uppercase tracking-widest text-[#1A1A1A] mb-4">Danh Mục Trạm</h2>
+            
+            <a href="#portfolio" className="group bg-white border-2 border-black p-5 flex items-center justify-between hover:bg-neutral-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px]">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-black text-white border border-black group-hover:bg-white group-hover:text-black transition-colors">
+                  <Terminal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-tight">Portfolio</h3>
+                  <p className="text-[11px] text-gray-500 font-mono tracking-wider">Hồ sơ cá nhân và dự án</p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" />
+            </a>
+
+            <a href="#journey" className="group bg-white border-2 border-black p-5 flex items-center justify-between hover:bg-neutral-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px]">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-black text-white border border-black group-hover:bg-white group-hover:text-black transition-colors">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-tight">Hành Trình</h3>
+                  <p className="text-[11px] text-gray-500 font-mono tracking-wider">Lộ trình học tập và cột mốc</p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" />
+            </a>
+
+            <a href="#warehouse" className="group bg-white border-2 border-black p-5 flex items-center justify-between hover:bg-neutral-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px]">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-black text-white border border-black group-hover:bg-white group-hover:text-black transition-colors">
+                  <Dumbbell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-tight">Kho Ứng Dụng</h3>
+                  <p className="text-[11px] text-gray-500 font-mono tracking-wider">Các module và widget thực hành</p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" />
+            </a>
+
+            <a href="#mentor" className="group bg-white border-2 border-black p-5 flex items-center justify-between hover:bg-neutral-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px]">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-black text-white border border-black group-hover:bg-white group-hover:text-black transition-colors">
+                  <Map className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-tight">Góc Mentor</h3>
+                  <p className="text-[11px] text-gray-500 font-mono tracking-wider">Bài viết và chia sẻ định hướng</p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" />
+            </a>
           </div>
+        ) : (
+          <div id="active-tab-viewport" className="transition-all duration-300">
+            {currentHash === '#portfolio' && (
+              <Portfolio profile={profile} onUpdateProfile={handleUpdateProfile} />
+            )}
 
-          <div className="p-6 bg-white border-2 border-black flex items-center gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)]">
-            <div className="p-2.5 border border-black bg-neutral-50 text-black">
-              <Award className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[9px] font-bold font-mono uppercase tracking-widest text-gray-400">Cột mốc hoàn thành</p>
-              <p className="text-lg font-black text-black font-mono">
-                {completedMilestonesCount} <span className="text-xs text-gray-400 font-normal">/ {totalMilestonesCount}</span>
-              </p>
-            </div>
+            {currentHash === '#journey' && (
+              <LearningJourney milestones={milestones} onUpdateMilestones={handleUpdateMilestones} />
+            )}
+
+            {currentHash.startsWith('#warehouse') && (
+              <AppWarehouse currentHash={currentHash} />
+            )}
+
+            {currentHash === '#mentor' && (
+              <MentorCorner />
+            )}
           </div>
-
-          <div className="p-6 bg-white border-2 border-black flex items-center gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)]">
-            <div className="p-2.5 border border-black bg-neutral-50 text-black">
-              <Trophy className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[9px] font-bold font-mono uppercase tracking-widest text-gray-400">Động tác tuần này</p>
-              <p className="text-lg font-black text-black font-mono">
-                {completedExercises} <span className="text-xs text-gray-400 font-normal">/ {totalExercises}</span>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Tab view containers */}
-        <div id="active-tab-viewport" className="transition-all duration-300">
-          
-          {activeTab === 'portfolio' && (
-            <Portfolio profile={profile} onUpdateProfile={handleUpdateProfile} />
-          )}
-
-          {activeTab === 'journey' && (
-            <LearningJourney milestones={milestones} onUpdateMilestones={handleUpdateMilestones} />
-          )}
-
-          {activeTab === 'warehouse' && (
-            <AppWarehouse workoutDays={workoutDays} onUpdateWorkoutDays={handleUpdateWorkoutDays} />
-          )}
-
-          {activeTab === 'mentor' && (
-            <MentorCorner />
-          )}
-
-        </div>
+        )}
 
       </main>
 

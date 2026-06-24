@@ -36,6 +36,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+
 const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -427,6 +428,183 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
     </script>
 </body>
 </html>`;
+const DEFAULT_POMODORO_HTML = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Lofi Focus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b0f19;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between p-4 pb-12">
+    <div class="max-w-md mx-auto w-full flex-grow flex flex-col justify-center items-center mt-8">
+        <!-- App Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full text-center shadow-2xl relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-24 h-24 bg-red-500/15 rounded-full blur-xl"></div>
+            
+            <span class="text-[10px] font-mono tracking-widest text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full uppercase font-bold">LOFI FOCUS SESSION</span>
+            
+            <h2 id="session-label" class="text-base font-extrabold text-white mt-4 uppercase tracking-wider">Thời gian làm việc</h2>
+            
+            <!-- Timer Display -->
+            <div class="my-6 relative">
+                <div id="countdown" class="text-5xl font-black font-mono text-white tracking-widest">25:00</div>
+                <!-- Dynamic progress arc simulation with sleek bar -->
+                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-4">
+                    <div id="prog-bar" class="h-full bg-gradient-to-r from-red-500 to-amber-500 transition-all duration-300" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="grid grid-cols-3 gap-2 mb-6">
+                <button onclick="changeDuration(15)" class="bg-slate-800 hover:bg-slate-700 text-[10px] py-2 rounded-xl transition text-slate-300">Nghỉ 15 phút</button>
+                <button onclick="changeDuration(25)" class="bg-slate-800 hover:bg-slate-750 text-[10px] py-2 rounded-xl transition font-bold text-red-400">Chuẩn 25 phút</button>
+                <button onclick="changeDuration(45)" class="bg-slate-800 hover:bg-slate-700 text-[10px] py-2 rounded-xl transition text-slate-300">Sâu 45 phút</button>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="btn-play" onclick="toggleTimer()" class="flex-1 bg-red-500 hover:bg-red-600 text-slate-950 font-bold text-xs py-3 rounded-xl transition uppercase tracking-wider">Bắt đầu</button>
+                <button onclick="resetTimer()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold p-3 rounded-xl transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15H19" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Ambient Web Audio Synthsizer -->
+        <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 w-full mt-4 text-xs">
+            <div class="flex justify-between items-center mb-2">
+                <span class="font-bold text-slate-300">🎵 Âm thanh sóng não (Web Audio API)</span>
+                <span id="noise-status" class="text-[9px] text-slate-500 tracking-widest uppercase">ĐANG TẮT</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mb-3 block leading-relaxed">Tự động phát tần số sóng Alpha êm dịu giúp dập tắt mọi tạp âm xung quanh, rèn luyện trạng thái tập trung sâu bền bỉ.</p>
+            <button onclick="toggleAudio()" id="btn-audio" class="w-full bg-slate-800 hover:bg-slate-750 text-white font-bold py-2 rounded-xl text-[10px] transition uppercase tracking-wider">PHÁT SÓNG NÃO TẬP TRUNG</button>
+        </div>
+    </div>
+
+    <script>
+        let initialTime = 25 * 60;
+        let timeLeft = initialTime;
+        let timerId = null;
+        let isRunning = false;
+        
+        let audioCtx = null;
+        let osc = null;
+        let gainNode = null;
+        let isAudioPlaying = false;
+
+        function updateDisplay() {
+            let mins = Math.floor(timeLeft / 60);
+            let secs = timeLeft % 60;
+            document.getElementById('countdown').innerText = mins.toString().padStart(2, '0') + ":" + secs.toString().padStart(2, '0');
+            
+            let percentage = (timeLeft / initialTime) * 100;
+            document.getElementById('prog-bar').style.width = percentage + "%";
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerId);
+                timerId = null;
+                isRunning = false;
+                document.getElementById('btn-play').innerText = "Tiếp tục";
+                document.getElementById('btn-play').className = "flex-1 bg-red-500 text-slate-950 font-bold text-xs py-3 rounded-xl transition uppercase tracking-wider";
+            } else {
+                isRunning = true;
+                document.getElementById('btn-play').innerText = "Tạm dừng";
+                document.getElementById('btn-play').className = "flex-1 bg-slate-700 text-white font-bold text-xs py-3 rounded-xl transition uppercase tracking-wider";
+                timerId = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft <= 0) {
+                        clearInterval(timerId);
+                        timerId = null;
+                        isRunning = false;
+                        timeLeft = 0;
+                        document.getElementById('btn-play').innerText = "Hoàn thành! 🎉";
+                        playBeep();
+                    }
+                    updateDisplay();
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            timerId = null;
+            isRunning = false;
+            timeLeft = initialTime;
+            document.getElementById('btn-play').innerText = "Bắt đầu";
+            document.getElementById('btn-play').className = "flex-1 bg-red-500 text-slate-950 font-bold text-xs py-3 rounded-xl transition uppercase tracking-wider";
+            updateDisplay();
+        }
+
+        function changeDuration(mins) {
+            initialTime = mins * 60;
+            resetTimer();
+        }
+
+        function playBeep() {
+            try {
+                let ctx = new (window.AudioContext || window.webkitAudioContext)();
+                let o = ctx.createOscillator();
+                let g = ctx.createGain();
+                o.connect(g);
+                g.connect(ctx.destination);
+                o.type = "sine";
+                o.frequency.setValueAtTime(523.25, ctx.currentTime);
+                g.gain.setValueAtTime(0.5, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.0);
+                o.start();
+                o.stop(ctx.currentTime + 1.0);
+            } catch(e) {}
+        }
+
+        function toggleAudio() {
+            if (isAudioPlaying) {
+                if (osc) {
+                    osc.stop();
+                    osc = null;
+                }
+                isAudioPlaying = false;
+                document.getElementById('noise-status').innerText = "ĐANG TẮT";
+                document.getElementById('btn-audio').innerText = "PHÁT SÓNG NÃO TẬP TRUNG";
+            } else {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    osc = audioCtx.createOscillator();
+                    gainNode = audioCtx.createGain();
+                    
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(110, audioCtx.currentTime); // Low alpha wave base
+                    
+                    gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime);
+                    
+                    osc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    osc.start();
+                    isAudioPlaying = true;
+                    document.getElementById('noise-status').innerText = "ĐANG PHÁT";
+                    document.getElementById('btn-audio').innerText = "TẮT SÓNG NÃO";
+                } catch(e) {
+                    alert("Trình duyệt chặn khởi tạo âm thanh tự động.");
+                }
+            }
+        }
+    </script>
+</body>
+</html>`;
 
 
 const DEFAULT_BLANK_HTML = `<!DOCTYPE html>
@@ -480,6 +658,15 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
         category: 'fitness',
         icon: 'Dumbbell',
         code: DEFAULT_EMBED_HTML,
+      },
+      {
+        id: 'app_pomodoro',
+        filename: 'Pomodoro.html',
+        title: 'Pomodoro Lofi Focus',
+        description: 'Đồng hồ đếm ngược phiên làm việc tích hợp bộ phát âm thanh sóng não Alpha giúp tập trung sâu bền bỉ.',
+        category: 'utility',
+        icon: 'Clock',
+        code: DEFAULT_POMODORO_HTML,
       },
     ];
   });

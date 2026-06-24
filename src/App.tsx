@@ -13,7 +13,7 @@ import MentorCorner from './components/MentorCorner';
 import { INITIAL_PROFILE, INITIAL_MILESTONES } from './data';
 import { UserProfile, LearningMilestone } from './types';
 import { Terminal, Compass, Dumbbell, Map, ArrowRight } from 'lucide-react';
-
+import StudyPlan from './components/StudyPlan';
 export default function App() {
   const [currentHash, setCurrentHash] = useState(() => window.location.hash || '');
 
@@ -163,5 +163,9 @@ export default function App() {
 
     </div>
   );
+  return <StudyPlan/>;
 }
+
+
+
 

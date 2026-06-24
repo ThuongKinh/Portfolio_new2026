@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import StudyPlan from './StudyPlan';
 import { 
   Dumbbell, 
   Trash2, 
@@ -41,9 +42,7 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xà Đơn Toàn Năng - Lịch Tập Cá Nhân</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
@@ -62,12 +61,10 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
 </head>
 <body class="text-slate-100 min-h-screen flex flex-col pb-12">
 
-    <!-- Header Section -->
     <header class="bg-slate-900/80 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md px-4 py-4">
         <div class="max-w-md mx-auto flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                    <!-- Icon Pull Up Bar -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 6a2 2 0 012-2h12a2 2 0 012 2M4 6v10l4 2 4-2 4 2 4-2V6" />
                     </svg>
@@ -85,10 +82,8 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
         </div>
     </header>
 
-    <!-- Main App Container -->
     <main class="max-w-md mx-auto w-full px-4 flex-1 mt-4">
 
-        <!-- Quick Overview Progress Card -->
         <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/80 rounded-2xl p-4 mb-5 shadow-xl relative overflow-hidden">
             <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl"></div>
             <div class="flex justify-between items-center mb-2">
@@ -104,7 +99,6 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- Horizontal Scrollable Day Tab Bar -->
         <div class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-4 -mx-4 px-4 snap-x">
             <button onclick="switchDay(0)" class="day-tab snap-center shrink-0 px-4 py-2.5 rounded-xl border font-bold text-xs transition duration-200" data-day="0">THỨ 2</button>
             <button onclick="switchDay(1)" class="day-tab snap-center shrink-0 px-4 py-2.5 rounded-xl border font-bold text-xs transition duration-200" data-day="1">THỨ 3</button>
@@ -115,7 +109,6 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
             <button onclick="switchDay(6)" class="day-tab snap-center shrink-0 px-4 py-2.5 rounded-xl border font-bold text-xs transition duration-200" data-day="6">CN</button>
         </div>
 
-        <!-- Session Title & Focus Tag -->
         <div class="flex justify-between items-end mb-4">
             <div>
                 <span id="session-focus-badge" class="text-[10px] font-extrabold tracking-wider bg-slate-800 text-slate-300 px-2 py-1 rounded-md uppercase">FOCUS</span>
@@ -124,12 +117,9 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
             <span id="session-status" class="text-xs font-semibold text-slate-400">0/0 Đã hoàn thành</span>
         </div>
 
-        <!-- Exercise List -->
         <div id="exercise-list" class="space-y-3 mb-6">
-            <!-- Dynamically injected via JS -->
-        </div>
+            </div>
 
-        <!-- Float Interactive Timer Box -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-2xl mb-4">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-2">
@@ -148,7 +138,6 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
 
     </main>
 
-    <!-- Info / Progressive Overload Tips Modal -->
     <div id="info-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative">
             <button onclick="toggleInfoModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200">
@@ -178,7 +167,6 @@ const DEFAULT_EMBED_HTML = `<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- Script Section -->
     <script>
         // Database of exercises
         const workoutData = [
@@ -493,7 +481,7 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
         icon: 'Dumbbell',
         code: DEFAULT_EMBED_HTML,
       },
-          ];
+    ];
   });
 
   const isListView = currentHash === '#warehouse' || currentHash === '#warehouse/';
@@ -527,7 +515,7 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
 
   useEffect(() => {
     // When changing active app, update editor content
-    if (!isListView) {
+    if (!isListView && selectedAppId !== 'app_studyplan') {
       const selected = apps.find(a => a.id === selectedAppId);
       if (selected) {
         setHtmlCode(selected.code);
@@ -552,9 +540,7 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
     if (window.confirm('Bạn có chắc chắn muốn đặt lại mã nguồn của ứng dụng này về mẫu ban đầu không?')) {
       let defaultCode = DEFAULT_BLANK_HTML;
       if (activeApp.id === 'app_lichtap') defaultCode = DEFAULT_EMBED_HTML;
-      else if (activeApp.id === 'app_pomodoro') defaultCode = DEFAULT_POMODORO_HTML;
-      else if (activeApp.id === 'app_option_pricing') defaultCode = DEFAULT_FINANCE_HTML;
-
+      
       setHtmlCode(defaultCode);
       setRenderedHtml(defaultCode);
       const updated = apps.map((app) => {
@@ -585,14 +571,6 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
       defaultCode = DEFAULT_EMBED_HTML;
       selectedIcon = 'Dumbbell';
       selectedCategory = 'fitness';
-    } else if (newTemplateType === 'pomodoro') {
-      defaultCode = DEFAULT_POMODORO_HTML;
-      selectedIcon = 'Clock';
-      selectedCategory = 'utility';
-    } else if (newTemplateType === 'finance') {
-      defaultCode = DEFAULT_FINANCE_HTML;
-      selectedIcon = 'Layers';
-      selectedCategory = 'education';
     }
 
     const newApp: WebAppInfo = {
@@ -630,7 +608,6 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
     }
   };
 
-  // Helper trigger browser file download
   const handleDownloadAppHtml = (app: WebAppInfo) => {
     const blob = new Blob([app.code], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -679,19 +656,39 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
               </div>
               
               <span className="bg-neutral-100 border border-black px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-widest text-[#1A1A1A] self-start sm:self-auto">
-                TỔNG: {apps.length} TỆP BẢN DỰNG (.HTML)
+                TỔNG: {apps.length + 1} TỆP BẢN DỰNG (.HTML/.TSX)
               </span>
             </div>
 
             {/* Line-based list of apps including inline creator form */}
             <div className="flex flex-col gap-4">
               
-              {/* App Listing */}
+              {/* === BẮT ĐẦU: APP LỊCH HỌC NẰM TRÊN CÙNG === */}
+              <a 
+                href="#warehouse/app_studyplan"
+                className="group bg-white border-2 border-black p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-neutral-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px]"
+              >
+                <div className="flex items-center gap-4 relative z-0">
+                  <div className="p-3 bg-black text-white border border-black group-hover:bg-white group-hover:text-black transition-colors shrink-0">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black uppercase tracking-tight">Chiến Dịch Ép Xung 90 Ngày</h3>
+                    <p className="text-[11px] text-gray-500 font-mono tracking-wider">📄 StudyPlan.tsx (React Component)</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 md:gap-4 relative z-10 self-end md:self-auto">
+                  <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors ml-2 pointer-events-none hidden md:block" />
+                </div>
+              </a>
+              {/* === KẾT THÚC: APP LỊCH HỌC === */}
+
+              {/* === CÁC APP KHÁC NẰM BÊN DƯỚI (BAO GỒM LỊCH TẬP) === */}
               {apps.map((app) => {
                 return (
                   <a 
-                    href={`/${app.filename}`}
-                    target="_blank"
+                    href={`#warehouse/${app.id}`} 
                     key={app.id}
                     className="group bg-white border-2 border-black p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-neutral-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px]"
                   >
@@ -708,14 +705,14 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 md:gap-4 relative z-10 self-end md:self-auto" onClick={(e) => e.preventDefault()}>
+                    <div className="flex items-center gap-2 md:gap-4 relative z-10 self-end md:self-auto" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={(e) => {
                           e.preventDefault();
                           handleDownloadAppHtml(app);
                         }}
                         title="Tải tệp .html này về máy"
-                        className="p-2 text-gray-500 hover:text-black hover:bg-neutral-200 transition border border-transparent hover:border-black cursor-pointer bg-white md:bg-transparent"
+                        className="p-2 text-gray-500 hover:text-black hover:bg-neutral-200 transition border border-transparent hover:border-black cursor-pointer bg-white md:bg-transparent z-20 relative"
                       >
                         <Download className="w-4 h-4" />
                       </button>
@@ -726,7 +723,7 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
                             handleDeleteApp(app.id);
                           }}
                           title="Xoá khỏi kho ứng dụng"
-                          className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition border border-transparent hover:border-rose-600 cursor-pointer bg-white md:bg-transparent"
+                          className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition border border-transparent hover:border-rose-600 cursor-pointer bg-white md:bg-transparent z-20 relative"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -799,7 +796,40 @@ export default function AppWarehouse({ currentHash }: AppWarehouseProps) {
             </div>
           </div>
         </div>
+      ) : selectedAppId === 'app_studyplan' ? (
+        /* ========================================================
+           LỐI ĐI RIÊNG CHO REACT COMPONENT (Bỏ qua Sandbox)
+           ======================================================== */
+        <div className="space-y-6" id="sandbox-embed-tab">
+          {/* Nút Quay Lại với UI Brutalist */}
+          <div>
+            <a href="#warehouse" className="inline-flex items-center gap-2 text-xs font-bold font-mono tracking-widest uppercase text-black hover:bg-neutral-100 transition bg-white border-2 border-black px-5 py-2.5 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px]">
+              <ArrowLeft className="w-4 h-4" /> QUAY LẠI KHO ỨNG DỤNG
+            </a>
+          </div>
+
+          {/* Khung chứa StudyPlan - Tránh lỗi tràn giao diện */}
+          <div className="border-4 border-black bg-white overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] flex flex-col">
+            {/* Thanh tiêu đề giả lập (Mock Window Header) */}
+            <div className="bg-black text-white px-4 py-2.5 flex justify-between items-center border-b-2 border-black">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                <Layers className="w-3.5 h-3.5" /> LIVE PREVIEW // StudyPlan.tsx
+              </span>
+              <span className="flex items-center gap-1.5 text-[9px] font-mono uppercase text-emerald-400 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Active
+              </span>
+            </div>
+            
+            {/* Nội dung React App bị giới hạn chiều cao và có thanh cuộn riêng */}
+            <div className="max-h-[75vh] overflow-y-auto overflow-x-hidden bg-slate-50 relative">
+               <StudyPlan />
+            </div>
+          </div>
+        </div>
       ) : (
+        /* ========================================================
+           TRÌNH GIẢ LẬP HTML SANDBOX DÀNH CHO CÁC FILE CŨ
+           ======================================================== */
         <div className="space-y-8" id="sandbox-embed-tab">
           {/* Back button */}
           <div>
